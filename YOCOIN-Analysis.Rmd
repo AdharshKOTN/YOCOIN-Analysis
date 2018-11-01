@@ -6,24 +6,24 @@ output: html_document
 ---
 Introduction
 ------------
-The YoCoIN analysis project aims to analyze data of the Etherium coin YOCOIN and find out if we can deduce anything significant from the available data.
+The YOCOIN analysis project aims to analyze data of the Etherium coin YOCOIN and find out if we can deduce anything significant from the available data.
 
 What is Etherium?
 -----------------
-"Ethereum is a decentralized platform that runs smart contracts: applications that run exactly as programmed without any possibility of downtime, censorship, fraud or third-party interference. These apps run on a custom built blockchain, an enormously powerful shared global infrastructure that can move value around and represent the ownership of property."- [Source : https://www.ethereum.org/]
+"Ethereum is a decentralized platform that runs smart contracts: applications that run exactly as programmed without any possibility of downtime, censorship, fraud or third-party interference. These apps run on a custom built blockchain, an enormously powerful shared global infrastructure that can move value around and represent the ownership of property." [Source : https://www.ethereum.org/]
 
 What is ERC20?
 --------------
-ERC20 is a significant standard for tokens on Etherium. This feines a common list of rules that enables developers to  to accurately predict how new tokens will function within the larger Ethereum system.
-Source[https://www.investopedia.com/news/what-erc20-and-what-does-it-mean-ethereum/]
+ERC20 is a significant standard for tokens on Etherium. This defines a common list of rules that enables developers to accurately predict how new tokens will function within the larger Ethereum system.
+[Source : https://www.investopedia.com/news/what-erc20-and-what-does-it-mean-ethereum/]
 
 YOCOIN TOKEN
 ------------
-YOcoin was founded & launched on December 7th, 2015. It is an open-ledger, publicly exchanged, peer-to-peer crypto currency that is designed for the general public worldwide and will be utilized to pay for goods and services by many different industries across the globe, including but not limited to the direct sales industry. It uses the Etherium network for transaction and storage. [Sources:
+YOCOIN was founded & launched on December 7th, 2015. It is an open-ledger, publicly exchanged, peer-to-peer crypto currency that is designed for the general public worldwide and will be utilized to pay for goods and services by many different industries across the globe, including but not limited to the direct sales industry. It uses the Etherium network for transaction and storage. [Sources:
 https://yocoinweb.wordpress.com/, 
 https://steemit.com/yocoin/@tonypeacock/things-you-should-know-about-yocoin]
 
-We have analysed transaction data of YOCOIN over specific periof of time.YOCOIN has 10 decimal points .i.e. 10^16 tokens make a single YOCOIN and also there were 310,000,000 YOCOINs available at the time of our analysis.
+We have analysed transaction data of YOCOIN over specific period of time.YOCOINs can be  made of multiple tokens and 10^16 tokens make a single YOCOIN. Also there were 310,000,000 YOCOINs available at the time of our analysis.
 
 Our goal
 --------
@@ -31,21 +31,24 @@ We tried to achieve couple of things during this project.
 
 1> We have taken the sellers and buyers information out of the dataset and tried to plot their frequencies to find out what distribution they follow.
 
-2> We have taken number of transactions for different dates between 07-21-2016 and  02-05-2018, and the corresponding highest token prices for each day and then tried to find out any correlation between highest stock price and number of transaction in a particular day. To do this we split our dataset into multiple layers(bins) and computed correlation value for each layers.
+2> We have taken number of transactions for different dates between 07-21-2016 and  02-05-2018, and the corresponding highest token prices for each day and then tried to find out any correlation between highest stock price and number of transactions in a particular day. To do this we split our dataset into multiple layers(bins) and computed correlation value for each layers.
 
 Preprocessing
 -------------
 Before starting the analysis, we have done some preprosessing on the data and removed few outliers.
 
-1> We removed all the transections which were dealing with coins more than the total available coins.These were spurious transactiions and we do not need to consider these for our project.
+1> We removed all the transections which were dealing with coins more than the total available coins.These were spurious transactiions and we do not need to consider these for our analysis.
 
 2> Then we removed very big transactions and very small transactions. These were extreme outliers and removing these values yielded better results.
 
 Packages Used
 -------------
 We used the following packages in our code.
+
 1>'fitdistrplus': This has been used to plot sellers and buyers data in different distributions.
-2>'ggplot2': This has been used to plot data along different axes with different attributes.
+
+2>'ggplot2': This has been used to plot data along the different axes with different attributes.
+
 3> 'reshape' : This has been used to join tables.
 
 Analysis
@@ -68,31 +71,53 @@ unprocessed_data<-read.csv(file="networkyocoinTX.txt", header = F, sep=" ")
 colnames(unprocessed_data)<-c("Sellers", "Buyers", "TimeStamps", "TokenAmounts")
 
 message("Number of rows in unprocessed data: ", nrow(unprocessed_data))
-message("Summary of the unprocessed data:")
+```
+Summary of the unprocessed data:
+
+```{r comment=NA}
 summary(unprocessed_data)
 total_circulation <-(31.000000e+23)
 outliers<-subset(unprocessed_data, TokenAmounts > total_circulation)
 message("Number of outlier rows: ", nrow(outliers))
-message("Summary of the outliers")
+```
+Summary of the outliers:
+
+```{r comment=NA}
 summary(outliers)
-message("Below is the table of outlying buyers and the frequencies of trnsactions.")
+```
+
+Below is the table of outlying buyers and the frequencies of transactions.
+
+```{r comment=NA}
 outlying_buyers<-c(outliers$Buyers)
 outlying_buyers_table<-as.data.frame(table(outlying_buyers))
 outlying_buyers_table
-message("Below is the table of outlying sellers and the frequencies of transactions.")
+```
+
+Below is the table of outlying sellers and the frequencies of transactions.
+
+```{r comment=NA}
+
 outlying_sellers<-c(outliers$Sellers)
 outlier_sellers_table<-as.data.frame(table(outlying_sellers))
 outlier_sellers_table
+```
+First we removed impossible transactions.
 
-print("First we would remove impossible transaction.")
+```{r comment=NA}
 data_preprocessed<-subset(unprocessed_data, TokenAmounts <= total_circulation)
 summary(data_preprocessed)
+```
+We did one more round of pre-processing and removed 1 percentile of data from both the sides.
 
-print("We would do one more round of pre-processing. We will remove 1 percentile of data at both the sides.")
+```{r comment=NA}
 data<-data_preprocessed[data_preprocessed$TokenAmounts >                                                            quantile(data_preprocessed$TokenAmounts, 0.01), ]
 data<-data[data$TokenAmounts < quantile(data_preprocessed$TokenAmounts, 0.99), ]
 message("Number of rows in processed data: ", nrow(data))
-message("Summary of the processed data:")
+```
+Summary of the processed data:
+
+```{r comment=NA}
 summary(data)
 Buyers<-c(data$Buyers)
 Sellers<-c(data$Sellers)
@@ -101,58 +126,178 @@ BuyersTable<-as.data.frame(table(Buyers))
 SellersFreq<-(as.data.frame(table(SellersTable[,'Freq'])))
 BuyersFreq<-(as.data.frame(table(BuyersTable[,'Freq'])))
 seller_frequency <-c(SellersTable[,'Freq'])
-message("Summary of seller frequencies:")
-summary(seller_frequency)
-buyers_frequency <-c(BuyersTable[,'Freq'])
-message("Summary of buyer frequencies:")
-summary(buyers_frequency)
-seller_freq_frequency <-c(SellersFreq[,'Freq'])
-message("Summary of frequencies of seller frequencies:")
-summary(seller_freq_frequency)
-buyers_freq_frequency <-c(BuyersFreq[,'Freq'])
-message("Summary of frequencies of buyer frequencies:")
-summary(buyers_freq_frequency)
 ```
-After analysing the data, we have made an assumption that all these frequency data follow exponential distributions.We will try to plot exponential curves for all these data and then check them with Cullen and Frey graphs to verify their accuracy. If there is a mismatch, we will try to plot for the new type of distribution as well.
+
+Summary of seller frequencies:
+
+```{r comment=NA}
+summary(seller_frequency)
+hist(seller_frequency,breaks=100)
+buyers_frequency <-c(BuyersTable[,'Freq'])
+```
+
+Summary of buyer frequencies:
+
+```{r comment=NA}
+summary(buyers_frequency)
+hist(buyers_frequency,breaks=100)
+seller_freq_frequency <-c(SellersFreq[,'Freq'])
+```
+
+Summary of frequencies of sellers frequencies:
+
+```{r comment=NA}
+summary(seller_freq_frequency)
+hist(seller_freq_frequency,breaks=100)
+buyers_freq_frequency <-c(BuyersFreq[,'Freq'])
+```
+
+Summary of frequencies of buyers frequencies:
+
+```{r comment=NA}
+summary(buyers_freq_frequency)
+hist(buyers_freq_frequency,breaks=100)
+```
+
+After analysing the data and plotting the histogram for the same, we made an assumption that the 4 distributions, namely, sellers frequencies, buyers frequencies, frequencies of sellers frequencies and frequencies of buyers frequencies follow exponential distributions.
+
 
 ```{r comment=NA, Plot}
-message("Plots for frequencies of sellers:")
+```
+Analysis of the sellers and buyers data
+----------------------------------------
+
+We analysed the seller frequencies. Initially, we trimmed 1% of the data at the higher end to remove outliers.
+
+```{r comment=NA, Plot}
+seller_frequency<-seller_frequency[seller_frequency<quantile(seller_frequency, 0.99)]
+```
+Summary of data after trimming:
+
+```{r comment=NA}
+summary(seller_frequency)
+```
+Plots for frequencies of sellers with exponential distribution:
+
+```{r comment=NA}
 normal_dist_sellers <- fitdist(seller_frequency, "exp")
 plot(normal_dist_sellers)
-descdist(seller_frequency, discrete = TRUE)
-message("After drawing the Cullen and Frey graph, this looks somewhat close to poisson distribution.")
-normal_dist_sellers <- fitdist(seller_frequency, "pois")
-plot(normal_dist_sellers)
+```
 
-message("Plots for frequencies of buyers:")
+
+Now, we would draw the Cullen and Frey graph for this data set.
+
+```{r comment=NA}
+descdist(seller_frequency, discrete = TRUE)
+```
+
+After drawing the Cullen and Frey graph, this looked somewhat close to negative binomial distribution.
+As our assumption was not in line with our findings with Cullen and Frey graph, we would consider our prior assumption as false and plot according to our findings.
+
+```{r comment=NA}
+normal_dist_sellers <- fitdist(seller_frequency, "nbinom")
+plot(normal_dist_sellers)
+```
+
+We analysed the buyers frequency. Initially, we trimmed 1% of the data at the higher end to remove outliers.
+
+```{r comment=NA}
+buyers_frequency<-buyers_frequency[buyers_frequency<quantile(buyers_frequency, 0.99)]
+```
+Summary of data after trimming:
+
+```{r comment=NA}
+summary(buyers_frequency)
+```
+Plots for frequencies of buyers with exponential distribution:
+
+```{r comment=NA}
 normal_dist_buyers <- fitdist(buyers_frequency, "exp")
 plot(normal_dist_buyers)
+```
+
+Now, we would draw the Cullen and Frey graph for this data set.
+
+```{r comment=NA}
 descdist(buyers_frequency, discrete = TRUE)
-message("After drawing the Cullen and Frey graph, this looks somewhat close to negative binomial distribution.")
+```
+
+After drawing the Cullen and Frey graph, this looked somewhat close to negative binomial distribution.
+As our assumption was not in line with our findings with Cullen and Frey graph, we would consider our prior assumption as false and plot according to our findings.
+
+
+```{r comment=NA}
 normal_dist_buyers <- fitdist(buyers_frequency, "nbinom")
 plot(normal_dist_buyers)
+```
 
+We analysed the frequencies of frequencies of sellers. Initially, we trimmed 1% of the data at the higher end to remove outliers.
 
-message("Plots for frequencies of frequencies of sellers:")
+```{r comment=NA}
+seller_freq_frequency<-seller_freq_frequency[seller_freq_frequency<quantile(seller_freq_frequency, 0.99)]
+```
+Summary of data after trimming:
+
+```{r comment=NA}
+summary(seller_freq_frequency)
+```
+Plots for frequencies of frequencies of sellers with exponential distribution:
+
+```{r comment=NA}
 normal_dist_sellers_freq <- fitdist(seller_freq_frequency, "exp")
 plot(normal_dist_sellers_freq)
+```
+
+Now, we would draw the Cullen and Frey graph for this data set.
+
+```{r comment=NA}
 descdist(seller_freq_frequency, discrete = TRUE)
-message("After drawing the Cullen and Frey graph, this looks somewhat close to negative binomial distribution.")
+```
+
+After drawing the Cullen and Frey graph, this looked somewhat close to negative binomial distribution.
+As our assumption was not in line with our findings with Cullen and Frey graph, we would consider our prior assumption as false and plot according to our findings.
+
+```{r comment=NA}
 normal_dist_sellers_freq <- fitdist(seller_freq_frequency, "nbinom")
 plot(normal_dist_sellers_freq)
+```
 
-message("Plots for frequencies of frequencies of buyers:")
-normal_dist_buyers_freq <- fitdist(seller_freq_frequency, "exp")
+We analysed the frequencies of frequencies of buyers. Initially, we trimmed 1% of the data at the higher end to remove outliers.
+
+```{r comment=NA}
+buyers_freq_frequency<-buyers_freq_frequency[buyers_freq_frequency<quantile(buyers_freq_frequency, 0.99)]
+```
+Summary of data after trimming:
+
+```{r comment=NA}
+summary(buyers_freq_frequency)
+```
+Plots for frequencies of frequencies of buyers with exponential distribution:
+
+```{r comment=NA}
+normal_dist_buyers_freq <- fitdist(buyers_freq_frequency, "exp")
 plot(normal_dist_buyers_freq)
+```
+
+Now, we would draw the Cullen and Frey graph for this data set.
+
+```{r comment=NA}
 descdist(buyers_freq_frequency, discrete = TRUE)
-message("After drawing the Cullen and Frey graph, this looks somewhat close to negative binomial distribution.")
+```
+
+After drawing the Cullen and Frey graph, this looked somewhat close to negative binomial distribution.
+As our assumption was not in line with our findings with Cullen and Frey graph, we would consider our prior assumption as false and plot according to our findings.
+
+```{r comment=NA}
 normal_dist_buyers_freq <- fitdist(seller_freq_frequency, "nbinom")
 plot(normal_dist_buyers_freq)
 ```
 
 ```{r comment=NA, Correlation}
+```
+We would create multiple layers from the data and merge them with the highest price for each day and check correlation between price and number of transactions using the Pearsons correlation formula.
 
-print("Now we will create multiple layers from the data and merge them with the highest price for each day. ")
+```{r comment=NA, Correlation}
 max_amount=max(data$TokenAmounts)
 this_layer_data = data
 previous_layer_res_data = data
@@ -166,47 +311,12 @@ price_and_date<-price_table[column_to_keep]
 price_and_date$Date<-gsub("/","-",price_and_date$Date)
 price_and_date$Date<-format(as.Date(price_and_date$Date, format="%m-%d-%Y"), "%Y-%m-%d")
 max_trx = max_amount
-  factor = 1
-  #Layer1
-  message("Layer", factor)
-  multiplyer = multiplyer/10
-  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
-  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
-  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
-#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
- this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
- colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
-  Date<-c(this_layer_data$Date)
-  Date<-as.data.frame(table(Date))
-  merged_table<-merge(price_and_date, Date, all=FALSE)
-  message("number of rows in this layer :", nrow(this_layer_data))
-  message("number of rows once this layer is removed :", nrow(previous_layer_res_data))
-  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
-  cor_plot <- melt(merged_table, id.vars="Date") 
-  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
-  factor = factor + 1
-
-  #Layer 2
-  message("Layer", factor)
-  multiplyer = multiplyer/10
-  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
-  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
-  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
-#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
- this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
- colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
-  Date<-c(this_layer_data$Date)
-  Date<-as.data.frame(table(Date))
-  merged_table<-merge(price_and_date, Date, all=FALSE)
-  message("number of rows in this layer :", nrow(this_layer_data))
-  message("number of rows once this layer is removed :", nrow(previous_layer_res_data))
-  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
-  cor_plot <- melt(merged_table, id.vars="Date") 
-  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
-  factor = factor + 1
+factor = 1
+```
+Layer 1
+-------
   
-  #Layer3
-  message("Layer", factor)
+```{r comment=NA}
   multiplyer = multiplyer/10
   message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
   this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
@@ -217,72 +327,23 @@ max_trx = max_amount
   Date<-c(this_layer_data$Date)
   Date<-as.data.frame(table(Date))
   merged_table<-merge(price_and_date, Date, all=FALSE)
-  message("number of rows in this layer :", nrow(this_layer_data))
-  message("number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
   print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
   cor_plot <- melt(merged_table, id.vars="Date")
-  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
-  factor = factor + 1
-  
-  #Layer4
-  message("Layer", factor)
-  multiplyer = multiplyer/10
-  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
-  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
-  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
-#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
- this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
- colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
-  Date<-c(this_layer_data$Date)
-  Date<-as.data.frame(table(Date))
-  merged_table<-merge(price_and_date, Date, all=FALSE)
-  message("number of rows in this layer :", nrow(this_layer_data))
-  message("number of rows once this layer is removed :", nrow(previous_layer_res_data))
-  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
-  cor_plot <- melt(merged_table, id.vars="Date") 
-  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
-  factor = factor + 1
-  
-  #Layer5
-  message("Layer", factor)
-  multiplyer = multiplyer/10
-  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
-  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
-  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
-#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
- this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
- colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
-  Date<-c(this_layer_data$Date)
-  Date<-as.data.frame(table(Date))
-  merged_table<-merge(price_and_date, Date, all=FALSE)
-  message("number of rows in this layer :", nrow(this_layer_data))
-  message("number of rows once this layer is removed :", nrow(previous_layer_res_data))
-  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
-  cor_plot <- melt(merged_table, id.vars="Date") 
-  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
-  factor = factor + 1
+```
 
-#Layer6
-  message("Layer", factor)
-  multiplyer = multiplyer/10
-  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
-  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
-  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
-#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
- this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
- colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
-  Date<-c(this_layer_data$Date)
-  Date<-as.data.frame(table(Date))
-  merged_table<-merge(price_and_date, Date, all=FALSE)
-  message("number of rows in this layer :", nrow(this_layer_data))
-  message("number of rows once this layer is removed :", nrow(previous_layer_res_data))
-  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
-  cor_plot <- melt(merged_table, id.vars="Date") 
+Now we would plot number of transactions against transaction dates.
+  
+```{r comment=NA}  
   print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
   factor = factor + 1
+```
+
+Layer 2
+-------
   
-  #Layer7
-  message("Layer", factor)
+```{r comment=NA}
   multiplyer = multiplyer/10
   message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
   this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
@@ -293,10 +354,150 @@ max_trx = max_amount
   Date<-c(this_layer_data$Date)
   Date<-as.data.frame(table(Date))
   merged_table<-merge(price_and_date, Date, all=FALSE)
-  message("number of rows in this layer :", nrow(this_layer_data))
-  message("number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
   print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
   cor_plot <- melt(merged_table, id.vars="Date") 
+```
+  
+Now we would plot number of transactions against transaction dates.
+
+```{r comment=NA}  
+  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
+  factor = factor + 1
+```
+
+Layer 3
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date")
+```
+
+Now we would plot number of transactions against transaction dates.
+
+```{r comment=NA}
+  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
+  factor = factor + 1
+```
+
+Layer 4
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date") 
+```  
+  
+Now we would plot number of transactions against transaction dates.
+  
+```{r comment=NA}
+  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
+  factor = factor + 1
+```
+
+Layer 5
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date")
+```
+
+Now we would plot number of transactions against transaction dates.
+  
+```{r comment=NA}  
+  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
+  factor = factor + 1
+```
+
+Layer 6
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date")
+```  
+
+Now we would plot number of transactions against transaction dates.
+  
+```{r comment=NA}  
+  print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
+  factor = factor + 1
+```
+
+Layer 7
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+#print(ggplot(this_layer_data,aes(y = this_layer_data$TokenAmounts, x = this_layer_data$TimeStamps)) +geom_point())
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date") 
+```
+
+Now we would plot number of transactions against transaction dates.
+
+```{r comment=NA}    
   print(ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth())
   factor = factor + 1
   
@@ -314,8 +515,11 @@ max_trx = max_amount
   
 #cor_plot <- melt(merged_table, id.vars="Date") 
 #ggplot(cor_plot, aes(Date,value, col=variable)) +geom_point() + stat_smooth()
+```
 
-message("Let's take correlation for the entire data set")
+Correlation for the entire data set.
+
+```{r comment=NA}
 this_layer_data<-data
 this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
 colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
@@ -325,17 +529,30 @@ merged_table<-merge(price_and_date, Date, all=FALSE)
 cor.test(merged_table$High,merged_table$Freq, method = "pearson")
  
 
-cor_plot <- melt(merged_table, id.vars="Date") 
-ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth()  
- 
- message("Layer 4 had the highest correlation of 0.1811658. But the correlation values for different layers are very small.")
-
- 
+cor_plot <- melt(merged_table, id.vars="Date")
 ```
+
+Now we would plot number of transactions against transaction dates.
+
+```{r comment=NA}
+ggplot(cor_plot, aes(Date,value, col=variable)) + geom_point() + stat_smooth() 
+
+```
+
+Findings from different layers of data
+-------------------------------------
+ 
+The correlation values for different layers are very small with Layer 4 having the highest correlation value of 0.1811658 between number of transactions and the price of the coin.
+
+Scope of future Analysis
+------------------------
+
+No correlation could be established between number of transactions and the price of the coin. As a next step, we can try to find if there was any correlation between number of unique buyers/sellers and price of the coin. By doing this, we might find out, if the changes in coin prices were in anyway dependent on transactions completed between 07-21-2016 and  02-05-2018.
+
+
 Conclusion
 ----------
-After analyzing the YOCOIN data we can conclude, that there is a very less dependence of coin price with respect to the vumber of transactions. Which could mean that not enough coins were being bought or sold cumulatively. That could either point to the fact that people using this coin were not very confident with it's stability and hence the transaction amounts were short or this coin might not be considered or used for investment purpose.
-
+After analyzing the YOCOIN data we could not find much correlation between coin price and the number of transactions. So, we cannot draw any conclusion about the price of the coin on a particular day being dependent on the number of times coins were being bought or sold.
 
 
 
