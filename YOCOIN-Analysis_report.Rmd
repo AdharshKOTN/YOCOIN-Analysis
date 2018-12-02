@@ -1,0 +1,580 @@
+---
+title: "Analysis on YOCOIN Data"
+author: "Abhisek Banerjee, Nirmohi Dave"
+date: '`r format(Sys.time(), "%B %d, %Y")`'
+output: html_document
+---
+Introduction
+------------
+The YOCOIN analysis project aims to analyze data of the Etherium coin YOCOIN and find out if we can deduce anything significant from the available data.
+
+What is Etherium?
+-----------------
+The Etherium project provides a decentralized platform that uses smart contracts which allows applications to run exactly as programmed without any possibility of downtime., fraud or third-party interference. Applications run on a customized blockchain, which is a very powerful shared global infrastructure that can move value around and represent the ownership of property. 
+[Source : https://www.ethereum.org/]
+
+What is ERC20?
+--------------
+ERC20 is a significant standard for tokens on Etherium. This defines a common list of rules that enables developers to accurately predict how new tokens will function within the larger Ethereum system.
+[Source : https://www.investopedia.com/news/what-erc20-and-what-does-it-mean-ethereum/]
+
+YOCOIN TOKEN
+------------
+YOCOIN was founded & launched on December 7th, 2015. It is an open-ledger, publicly exchanged, peer-to-peer cryptocurrency that is designed for the general public worldwide and will be utilized to pay for goods and services by many different industries across the globe, including but not limited to the direct sales industry. It uses the Etherium network for transaction and storage. [Sources:
+https://yocoinweb.wordpress.com/, 
+https://steemit.com/yocoin/@tonypeacock/things-you-should-know-about-yocoin]
+
+We have analyzed transaction data of YOCOIN over a specific period of time. YOCOINs can be made of multiple tokens and 10^16 tokens make a single YOCOIN. Also, there were 310,000,000 YOCOINs available at the time of our analysis.
+
+Our goal
+--------
+We tried to achieve the following things during this project.
+  
+1> We have taken the sellers and buyers information out of the dataset and tried to plot their frequencies to find out what distribution they follow.
+  
+2> We have taken the number of transactions for different dates between 07-21-2016 and  02-05-2018, and the corresponding highest token prices for each day and then tried to find out any correlation between highest stock price and the number of transactions in a particular day. To do this we split our dataset into multiple layers(bins) and computed correlation value for each layer.
+  
+3> We have found a few more features such as unique buyers, unique sellers, average transaction amount, daily price change and using them tried to construct a linear regression model with the coin price.
+  
+4> We have tried to construct a random forest to create a prediction model for price prediction.
+
+Preprocessing
+-------------
+Before starting the analysis, we have done some preprocessing on the data and removed few outliers.
+
+1> We removed all the transactions which were dealing with coins more than the total available coins. These were spurious transactions and we do not need to consider these for our analysis.
+
+2> Then we removed very big transactions and very small transactions. These were extreme outliers and removing these values yielded better results.
+
+Packages Used
+-------------
+We used the following packages in our code.
+
+1>'fitdistrplus': This has been used to plot sellers and buyers data in different distributions.
+
+2>'ggplot2': This has been used to plot data along the different axes with different attributes.
+
+3> 'reshape': This has been used to join tables.
+
+4> 'randomForest':  This has been used for price prediction.
+
+
+```{r comment=NA}
+
+
+
+```
+\newpage
+
+Analysis
+--------
+
+```{r setup, include=FALSE, comment=NA}
+knitr::opts_chunk$set(echo = FALSE)
+```
+```{r message=FALSE}
+
+library(fitdistrplus)
+library(ggplot2)
+library(reshape)
+library(randomForest)
+
+```
+
+
+
+```{r comment=NA, YoCoin}
+
+unprocessed_data<-read.csv(file="networkyocoinTX.txt", header = F, sep=" ")
+colnames(unprocessed_data)<-c("Sellers", "Buyers", "TimeStamps", "TokenAmounts")
+
+message("Number of rows in unprocessed data: ", nrow(unprocessed_data))
+```
+
+Summary of the unprocessed data:
+
+```{r comment=NA}
+summary(unprocessed_data)
+total_circulation <-(31.000000e+23)
+outliers<-subset(unprocessed_data, TokenAmounts > total_circulation)
+message("Number of outlier rows: ", nrow(outliers))
+```
+
+Summary of the outliers:
+
+```{r comment=NA}
+summary(outliers)
+```
+
+Below is the table of outlying buyers and the frequencies of transactions.
+
+```{r comment=NA}
+outlying_buyers<-c(outliers$Buyers)
+outlying_buyers_table<-as.data.frame(table(outlying_buyers))
+outlying_buyers_table
+```
+
+Below is the table of outlying sellers and the frequencies of transactions.
+
+```{r comment=NA}
+
+outlying_sellers<-c(outliers$Sellers)
+outlier_sellers_table<-as.data.frame(table(outlying_sellers))
+outlier_sellers_table
+```
+
+First we removed impossible transactions.
+
+```{r comment=NA}
+data_preprocessed<-subset(unprocessed_data, TokenAmounts <= total_circulation)
+summary(data_preprocessed)
+```
+
+\newpage
+
+We did one more round of pre-processing and removed 1 percentile of data from both the sides.
+
+```{r comment=NA}
+data<-data_preprocessed[data_preprocessed$TokenAmounts >                                                            quantile(data_preprocessed$TokenAmounts, 0.01), ]
+data<-data[data$TokenAmounts < quantile(data_preprocessed$TokenAmounts, 0.99), ]
+message("Number of rows in processed data: ", nrow(data))
+```
+
+Summary of the processed data:
+
+```{r comment=NA}
+summary(data)
+Buyers<-c(data$Buyers)
+Sellers<-c(data$Sellers)
+SellersTable<-as.data.frame(table(Sellers))
+BuyersTable<-as.data.frame(table(Buyers))
+SellersFreq<-(as.data.frame(table(SellersTable[,'Freq'])))
+BuyersFreq<-(as.data.frame(table(BuyersTable[,'Freq'])))
+seller_frequency <-c(SellersTable[,'Freq'])
+```
+
+Summary of seller frequencies:
+
+```{r comment=NA}
+summary(seller_frequency)
+buyers_frequency <-c(BuyersTable[,'Freq'])
+```
+
+Summary of buyer frequencies:
+
+```{r comment=NA}
+summary(buyers_frequency)
+seller_freq_frequency <-c(SellersFreq[,'Freq'])
+```
+
+Summary of frequencies of sellers frequencies:
+
+```{r comment=NA}
+summary(seller_freq_frequency)
+```
+
+We removed some outliers by only keeping values < (.01*max value) as the median and max value varied greatly.
+
+```{r comment=NA}
+seller_freq_frequency<-subset(seller_freq_frequency, seller_freq_frequency < 0.01*max(seller_freq_frequency))
+summary(seller_freq_frequency)
+hist(seller_freq_frequency,breaks=100)
+
+```
+
+Summary of frequencies of buyers frequencies:
+
+```{r comment=NA}
+buyers_freq_frequency <-c(BuyersFreq[,'Freq'])
+summary(buyers_freq_frequency)
+```
+
+We removed some outliers by only keeping values < (.01*max value) as the median and max value varied greatly.
+
+```{r comment=NA}
+buyers_freq_frequency<-subset(buyers_freq_frequency, buyers_freq_frequency < 0.01*max(buyers_freq_frequency))
+summary(buyers_freq_frequency)
+hist(buyers_freq_frequency,breaks=100)
+```
+
+
+After analyzing the data and plotting the histogram for the same, we made an assumption that  frequencies of sellers frequencies and frequencies of buyers frequencies follow exponential distributions.
+
+
+
+Analysis of the sellers and buyers data
+----------------------------------------
+We analyzed the frequencies of frequencies of sellers. 
+
+Plots for frequencies of frequencies of sellers with exponential distribution:
+
+```{r comment=NA}
+qqplot(qexp(ppoints(length(seller_freq_frequency))), seller_freq_frequency)
+
+```
+
+Now, we would draw the Cullen and Frey graph for this data set.
+
+```{r comment=NA}
+descdist(seller_freq_frequency, discrete = TRUE)
+```
+
+
+After drawing the Cullen and Frey graph, this looked somewhat close to Poisson distribution.
+As our assumption was not in line with our findings with Cullen and Frey graph, we would consider our prior assumption as false and plot according to our findings.
+
+```{r comment=NA}
+normal_dist_sellers_freq <- fitdist(seller_freq_frequency, "pois")
+plot(normal_dist_sellers_freq)
+```
+
+We analysed the frequencies of frequencies of buyers. 
+
+Plots for frequencies of frequencies of buyers with exponential distribution:
+
+```{r comment=NA}
+qqplot(qexp(ppoints(length(buyers_freq_frequency))), buyers_freq_frequency)
+
+```
+
+Now, we would draw the Cullen and Frey graph for this data set.
+
+```{r comment=NA}
+descdist(buyers_freq_frequency, discrete = TRUE)
+```
+
+
+After drawing the Cullen and Frey graph, this looked somewhat close to Poisson distribution.
+As our assumption was not in line with our findings with Cullen and Frey graph, we would consider our prior assumption as false and plot according to our findings.
+
+```{r comment=NA}
+normal_dist_buyers_freq <- fitdist(seller_freq_frequency, "pois")
+plot(normal_dist_buyers_freq)
+```
+
+```{r comment=NA, Correlation}
+```
+
+We would create multiple layers from the data and merge them with the highest price for each day and check the correlation between price and number of transactions using the Pearsons correlation formula.
+
+```{r comment=NA, Correlation}
+max_amount=max(data$TokenAmounts)
+this_layer_data = data
+previous_layer_res_data = data
+multiplyer = 3
+price_table<-read.csv(file="yocoin.txt", header = T, sep="\t")
+colnames(price_table)<-c("Date", "Open", "High", "Low", "Close", "Volume", "Market_Cap")
+price_date<-c(price_table$Date)
+price_high<-c(price_table$High)
+column_to_keep<-c("Date", "High")
+price_and_date<-price_table[column_to_keep]
+price_and_date$Date<-gsub("/","-",price_and_date$Date)
+price_and_date$Date<-format(as.Date(price_and_date$Date, format="%m-%d-%Y"), "%Y-%m-%d")
+max_trx = max_amount
+factor = 1
+```
+
+Layer 1
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date")
+  factor = factor + 1
+```
+
+Layer 2
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date") 
+  factor = factor + 1
+```
+
+Layer 3
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date")
+  factor = factor + 1
+```
+
+Layer 4
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date") 
+  factor = factor + 1
+```
+
+Layer 5
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer*5.5/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date")
+  factor = factor + 1
+```
+
+Layer 6
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer*9/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date")
+  factor = factor + 1
+```
+
+Layer 7
+-------
+  
+```{r comment=NA}
+  multiplyer = multiplyer/10
+  message("Minimum trx val= " , max_amount*multiplyer, " Maximum trx val = ", max_trx)
+  this_layer_data<-subset(previous_layer_res_data, previous_layer_res_data$TokenAmounts >= (max_amount*multiplyer))
+  previous_layer_res_data<-subset(previous_layer_res_data,                                               previous_layer_res_data$TokenAmounts < (max_amount*multiplyer))
+ this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+ colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+  Date<-c(this_layer_data$Date)
+  Date<-as.data.frame(table(Date))
+  merged_table<-merge(price_and_date, Date, all=FALSE)
+  message("Number of rows in this layer :", nrow(this_layer_data))
+  message("Number of rows once this layer is removed :", nrow(previous_layer_res_data))
+  print(cor.test(merged_table$High,merged_table$Freq, method = "pearson"))
+  cor_plot <- melt(merged_table, id.vars="Date") 
+  factor = factor + 1
+  
+```
+
+Correlation for the entire data set
+-----------------------------------
+
+```{r comment=NA}
+this_layer_data<-data
+this_layer_data$TimeStamps <-as.Date(as.POSIXct(as.numeric(this_layer_data$TimeStamps), origin="1970-01-01"))
+colnames(this_layer_data)[which(colnames(this_layer_data) == 'TimeStamps')] <- 'Date'
+Date<-c(this_layer_data$Date)
+Date<-as.data.frame(table(Date))
+merged_table<-merge(price_and_date, Date, all=FALSE)
+cor.test(merged_table$High,merged_table$Freq, method = "pearson")
+ 
+
+cor_plot <- melt(merged_table, id.vars="Date")
+```
+
+
+
+Findings from different layers of data
+-------------------------------------
+The correlation values for different layers are very small with Layer 6 having the highest correlation value of 0.3062478 between the number of transactions and the price of the coin.
+
+Selecting other features
+----------------------------
+We tried with the following 4 features and checked if they had any significant correlation
+with stock opening price.
+
+a> Average transaction per day.
+
+b> Unique buyers.
+
+c> Unique sellers.
+
+d> (Closing price - opening price)/opening price.
+
+Also, we did not take opening price each day directly. We computed the simple price return with the opening price of the next day. The goal of this exercise would be to select some good features and create a regression model with them.
+
+
+Regression model
+----------------
+
+```{r comment=NA}
+data$TimeStamps <-as.Date(as.POSIXct(as.numeric(data$TimeStamps), origin="1970-01-01"))
+colnames(data)[which(colnames(data) == 'TimeStamps')] <- 'Date' 
+
+trans_sum <- aggregate(TokenAmounts ~ Date, data, FUN=sum)
+trans_unique_buyers <- aggregate(Buyers ~ Date, data, FUN= function(x) length(unique(x)))
+trans_unique_sellers <- aggregate(Sellers ~ Date, data, FUN= function(x) length(unique(x)))
+merged_table<-merge(trans_sum, trans_unique_buyers)
+merged_table<-merge(merged_table, trans_unique_sellers)
+merged_table$Date<-format(as.Date(merged_table$Date, format="%Y-%m-%d"), "%Y-%m-%d")
+merged_table <- as.data.frame(merged_table)
+column_to_keep<-c("Date", "Open", "Close")
+price_date_table<-price_table[column_to_keep]
+price_date_table$Date<-gsub("/","-",price_date_table$Date)
+price_date_table$Date<-format(as.Date(price_date_table$Date, format="%m-%d-%Y"), "%Y-%m-%d")
+
+price_table_final<-as.data.frame(price_date_table)
+final_table <-merge(price_table_final, merged_table,by = "Date", all=F)
+
+len = nrow(final_table)
+feature_table<-final_table
+for (i in 1:len -1){
+  feature_table[i, "Close"]= (final_table[i,"Close"]-final_table[i,"Open"])/final_table[i,"Open"]
+  feature_table[i, "Open"]= (final_table[i+1, "Open"]-final_table[i,"Open"])/final_table[i,"Open"]
+}
+feature_table<- feature_table[-nrow(feature_table),]
+```
+
+Correlation between unique buyers and opening price.
+
+```{r comment=NA}
+cor.test(feature_table$Open,feature_table$Buyers, method = "pearson")
+```
+
+Correlation between unique sellers and opening price.
+
+```{r comment=NA}
+cor.test(feature_table$Open,feature_table$Sellers, method = "pearson")
+```
+
+Correlation between average token amount per transaction and opening price.
+
+```{r comment=NA}
+cor.test(feature_table$Open,feature_table$TokenAmounts, method = "pearson")
+```
+
+Correlation between percentage change in price in a day  and opening price.
+
+```{r comment=NA}
+cor.test(feature_table$Open,feature_table$Close, method = "pearson")
+```
+
+So, only the daily price change among all the features had a very high correlation with the next day's opening price. We will now fit a linear model with all the features mentioned above.
+
+We checked the median of the opening prices.
+
+```{r comment=NA}
+message("Median of the opening prices : ", median(feature_table$Open))
+```
+
+We checked the max value of the opening prices.
+
+```{r comment=NA}
+message("Maximum value of the opening prices :", max(feature_table$Open))
+```
+
+THe maxium value and median values differed by a lot. So we would do some preprocessing and removing all the rows that have opening value < 0.005*max(opening value).
+
+```{r comment=NA}
+feature_table<-subset(feature_table, Open < 0.005*max(feature_table$Open))
+```
+
+We would now fit the data in a regression model.
+
+```{r comment=NA}
+lm_model<-lm(formula=Open~TokenAmounts+Buyers+Sellers+Close, data=feature_table)
+summary(lm_model)
+plot(lm_model)
+```
+
+
+Observations from the linear model
+----------------------------------
+We found that most of the points were along the fitted models and the residuals for those points are very less. There were a few points that remained outside, but we kept them as they were not varying with a great degree with other points and should not be considered as outliers.
+
+Even though we forcefully fitted multiple transaction information as features, the most correlated feature was the daily price change and that yielded us result better than the result computed otherwise. Our linear model generated very less residual values for most of the points, so
+it was to some extent adequate to represent our dataset.
+
+Randomforest model for price prediction
+---------------------------------------
+We split the available price table into training and validation sets and used the random forest to predict the house prices and got the following mean squared error value for the training and validation set.
+
+30% of the available data were kept for validation.
+
+```{r comment=NA}
+
+
+set.seed(123)
+size <- floor(0.70 * nrow(feature_table))
+index<- sample(seq_len(nrow(feature_table)), size = size)
+train <- feature_table[index, ]
+test <- feature_table[-index, ]
+columns_to_keep<-c("Open", "Close", "TokenAmounts", "Buyers", "Sellers")
+train<-train[columns_to_keep]
+test<-test[columns_to_keep]
+rf_model <-randomForest(formula = Open ~ ., data = train, ntree = 1000,mtry = 4,importance = TRUE)
+print(rf_model)
+training_prediction <- predict(rf_model, train, type = "Response")
+
+mse_train = mean((training_prediction-train$Open)^2)
+
+message("MSE for training data: ",mse_train )
+test_prediction <- predict(rf_model, test, type = "Response")
+mse_test = mean((test_prediction-test$Open)^2)
+message("MSE for validation data: ",mse_test)
+
+```
+
+
+Conclusion
+----------
+After analyzing the YOCOIN data we found out that it's price did not depend on the transaction information greatly. We got a rather high correlation with the coin price of the day before. Also barring few spikes the there was not much jump in the coin prices as well. So we do not have enough data to hypothesize any conclusion regarding how the price should change for this token. We need more data to have a deeper understanding of the transactions. For example looking at the transaction data, we can not tell how this affects the net available coins in the market and so on. Gathering that information will help us greatly to find a strong model for YOCOIN.
